@@ -1,6 +1,7 @@
 package jchess.board;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 
 import java.util.Arrays;
@@ -70,7 +71,7 @@ public class Board {
      * The list of all positions of all pieces. This makes
      * move generation significantly faster.
      */
-    private final IntArrayList pieces = new IntArrayList();
+    private final IntArraySet pieces = new IntArraySet();
 
     /**
      * Get the current turn.
@@ -98,7 +99,7 @@ public class Board {
      * @return The rank.
      */
     public static int rank(int pos) {
-        return (pos & 0b111000) >> 3;
+        return pos >> 3;
     }
 
     /**
@@ -182,13 +183,24 @@ public class Board {
     }
 
     /**
+     * Check whether the given piece is of the given color.
+     *
+     * @param piece The piece.
+     * @param col The color.
+     * @return Whether the piece exists and is of the given color.
+     */
+    public static boolean isPieceOfColor(byte piece, byte col) {
+        return piece != 0 && (byte) (piece & 0b0001000) == col;
+    }
+
+    /**
      * Check whether the piece at the given position is of the given color.
      *
      * @param pos The position.
      * @param col The color.
      * @return Whether the piece exists and is of the given color.
      */
-    public boolean isPieceOfColor(int pos, byte col) {
+    public boolean isPieceOfColorOnBoard(int pos, byte col) {
         byte piece = board[pos];
         return piece != 0 && (byte) (piece & 0b0001000) == col;
     }
@@ -263,17 +275,15 @@ public class Board {
         byte pp = Moves.getPromotionPiece(move, (byte) 0xFF);
         if (pp != (byte)0xFF) {
             // undo promotion
-            board[dst] = 0;
-            board[src] = (byte) (Pieces.PAWN | col);
+            set(dst, 0);
+            set(src, (byte) (Pieces.PAWN | col));
             return;
         } else {
             // undo simple move
             // todo: support en passant undo
             byte piece = board[dst];
-            board[dst] = Moves.getCaptured(move);
-            board[src] = piece;
-
-            System.out.println("src(og): " + Pieces.toString(piece) + ", dst(captured): " + Pieces.toString(board[dst]));
+            set(dst, Moves.getCaptured(move));
+            set(src, piece);
         }
         
         // switch the turn
@@ -296,8 +306,8 @@ public class Board {
         int cPos;
         byte piece;
 
-        int sf = file(pos), file;
-        int sr = rank(pos), rank;
+        int sf = pos & 0b000111, file;
+        int sr = pos >> 3, rank;
 
         // file +
         cPos = pos;
@@ -343,8 +353,8 @@ public class Board {
         int cPos;
         byte piece;
 
-        int sf = file(pos), file;
-        int sr = rank(pos), rank;
+        int sf = pos & 0b000111, file;
+        int sr = pos >> 3, rank;
 
         // f+ r+
         cPos = pos;
@@ -398,8 +408,8 @@ public class Board {
         switch (type) {
             case Pieces.PAWN -> {
                 int dPos;
-                int y = rank(pos);
-                int x = file(pos);
+                int y = pos >> 3;
+                int x = pos & 0b000111;
 
                 // check the color to determine the
                 // directions the pawn can move
@@ -420,10 +430,10 @@ public class Board {
 
                 // check for captures
                 if (x != 0)
-                    if (isPieceOfColor(dPos = pos + rs - 1, oppCol))
+                    if (isPieceOfColorOnBoard(dPos = pos + rs - 1, oppCol))
                         list.add(createMove(pos, dPos));
                 if (x != 7)
-                    if (isPieceOfColor(dPos = pos + rs + 1, oppCol))
+                    if (isPieceOfColorOnBoard(dPos = pos + rs + 1, oppCol))
                         list.add(createMove(pos, dPos));
 
                 // check for en passant
@@ -434,33 +444,33 @@ public class Board {
 
             case Pieces.KNIGHT -> {
                 int dPos;
-                int y = rank(pos);
-                int x = file(pos);
+                int y = pos >> 3;
+                int x = pos & 0b000111;
 
-                if (x != 0 && y > 1) if (!isPieceOfColor(dPos = pos - 16 - 1, col)) list.add(createMove(pos, dPos)); // -1 -2
-                if (x > 1 && y != 0) if (!isPieceOfColor(dPos = pos - 8  - 2, col)) list.add(createMove(pos, dPos)); // -2 -1
-                if (x != 7 && y < 6) if (!isPieceOfColor(dPos = pos + 16 + 1, col)) list.add(createMove(pos, dPos)); //  1  2
-                if (x < 6 && y != 7) if (!isPieceOfColor(dPos = pos + 8  + 2, col)) list.add(createMove(pos, dPos)); //  2  1
-                if (x > 1 && y != 7) if (!isPieceOfColor(dPos = pos - 16 + 1, col)) list.add(createMove(pos, dPos)); // -2  1
-                if (x != 0 && y < 6) if (!isPieceOfColor(dPos = pos - 8  + 2, col)) list.add(createMove(pos, dPos)); // -1  2
-                if (x < 6 && y != 0) if (!isPieceOfColor(dPos = pos + 16 - 1, col)) list.add(createMove(pos, dPos)); //  2 -1
-                if (x != 7 && y > 1) if (!isPieceOfColor(dPos = pos +  8 - 2, col)) list.add(createMove(pos, dPos)); //  1 -2
+                if (x != 0 && y > 1) if (!isPieceOfColorOnBoard(dPos = pos - 16 - 1, col)) list.add(createMove(pos, dPos)); // -1 -2
+                if (x > 1 && y != 0) if (!isPieceOfColorOnBoard(dPos = pos - 8  - 2, col)) list.add(createMove(pos, dPos)); // -2 -1
+                if (x != 7 && y < 6) if (!isPieceOfColorOnBoard(dPos = pos + 16 + 1, col)) list.add(createMove(pos, dPos)); //  1  2
+                if (x < 6 && y != 7) if (!isPieceOfColorOnBoard(dPos = pos + 8  + 2, col)) list.add(createMove(pos, dPos)); //  2  1
+                if (x > 1 && y != 7) if (!isPieceOfColorOnBoard(dPos = pos - 16 + 1, col)) list.add(createMove(pos, dPos)); // -2  1
+                if (x != 0 && y < 6) if (!isPieceOfColorOnBoard(dPos = pos - 8  + 2, col)) list.add(createMove(pos, dPos)); // -1  2
+                if (x < 6 && y != 0) if (!isPieceOfColorOnBoard(dPos = pos + 16 - 1, col)) list.add(createMove(pos, dPos)); //  2 -1
+                if (x != 7 && y > 1) if (!isPieceOfColorOnBoard(dPos = pos +  8 - 2, col)) list.add(createMove(pos, dPos)); //  1 -2
             }
 
             case Pieces.KING -> {
                 int dPos;
-                int y = rank(pos);
-                int x = file(pos);
+                int y = pos >> 3;
+                int x = pos & 0b000111;
 
-                if (x != 7 && y != 7) if (!isPieceOfColor(dPos = pos + 8 + 1, col)) list.add(createMove(pos, dPos));
-                if (x != 7 && y != 0) if (!isPieceOfColor(dPos = pos + 8 - 1, col)) list.add(createMove(pos, dPos));
-                if (x != 0 && y != 7) if (!isPieceOfColor(dPos = pos - 8 + 1, col)) list.add(createMove(pos, dPos));
-                if (x != 0 && y != 0) if (!isPieceOfColor(dPos = pos - 8 - 1, col)) list.add(createMove(pos, dPos));
+                if (x != 7 && y != 7) if (!isPieceOfColorOnBoard(dPos = pos + 8 + 1, col)) list.add(createMove(pos, dPos));
+                if (x != 7 && y != 0) if (!isPieceOfColorOnBoard(dPos = pos + 8 - 1, col)) list.add(createMove(pos, dPos));
+                if (x != 0 && y != 7) if (!isPieceOfColorOnBoard(dPos = pos - 8 + 1, col)) list.add(createMove(pos, dPos));
+                if (x != 0 && y != 0) if (!isPieceOfColorOnBoard(dPos = pos - 8 - 1, col)) list.add(createMove(pos, dPos));
 
-                if (x != 0) if (!isPieceOfColor(dPos = pos - 1, col)) list.add(createMove(pos, dPos));
-                if (x != 7) if (!isPieceOfColor(dPos = pos + 1, col)) list.add(createMove(pos, dPos));
-                if (y != 0) if (!isPieceOfColor(dPos = pos - 8, col)) list.add(createMove(pos, dPos));
-                if (y != 7) if (!isPieceOfColor(dPos = pos + 8, col)) list.add(createMove(pos, dPos));
+                if (x != 0) if (!isPieceOfColorOnBoard(dPos = pos - 1, col)) list.add(createMove(pos, dPos));
+                if (x != 7) if (!isPieceOfColorOnBoard(dPos = pos + 1, col)) list.add(createMove(pos, dPos));
+                if (y != 0) if (!isPieceOfColorOnBoard(dPos = pos - 8, col)) list.add(createMove(pos, dPos));
+                if (y != 7) if (!isPieceOfColorOnBoard(dPos = pos + 8, col)) list.add(createMove(pos, dPos));
             }
 
             case Pieces.ROOK -> generateUnverifiedLineMovesParallel(list, pos, piece);
@@ -482,10 +492,21 @@ public class Board {
      * @param list The output move list.
      */
     public void generateAllUnverifiedMoves(LongArrayList list) {
-        final int l = pieces.size();
-        for (int i = 0; i < l; i++) {
-            int pos = pieces.getInt(i);
+        for (int pos : pieces) {
+            generateUnverifiedMoves(list, pos, board[pos]);
+        }
+    }
 
+    /**
+     * Generate all pseudo-legal moves for all pieces of the given color on the board.
+     *
+     * @param list The output move list.
+     */
+    public void generateAllUnverifiedMoves(LongArrayList list, int col) {
+        for (int pos : pieces) {
+            byte piece = board[pos];
+            if ((piece & 0b0001000) != col)
+                continue;
             generateUnverifiedMoves(list, pos, board[pos]);
         }
     }

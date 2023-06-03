@@ -25,8 +25,6 @@ public class BasicBoardTests {
 
     @Test
     void test_Pos() {
-        Board board = new Board();
-
         for (int file = 0; file < 8; file++) {
             for (int rank = 1; rank < 8; rank++) {
                 int pos = Board.pos(file, rank);
@@ -106,6 +104,11 @@ public class BasicBoardTests {
             // generate moves
             moveList.clear();
             board.generateAllUnverifiedMoves(moveList);
+//
+//            for (long move : moveList) {
+//                board.makeMove(move);
+//                board.unmakeMove(move);
+//            }
         }, 1_000_000_000, 1_000_000_000).print();
     }
 

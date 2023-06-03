@@ -63,7 +63,7 @@ public final class Moves {
     }
 
     public static byte getSourcePosition(long move) {
-        return (byte) ((move & 0xFF00000000000000L) >> 56);
+        return (byte) ((move >> 56) & 0xFF);
     }
 
     public static byte getDestinationPosition(short move) {
@@ -71,7 +71,7 @@ public final class Moves {
     }
 
     public static byte getDestinationPosition(long move) {
-        return (byte) ((move & 0x00FF000000000000L) >> 48);
+        return (byte) ((move >> 48) & 0x00FF);
     }
 
     /**
